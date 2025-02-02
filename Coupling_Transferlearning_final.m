@@ -1,6 +1,6 @@
 clear all
 close all
-% for examples from section 6
+% for examples in section 6
 % This code is adapted from codes used in the paper M. Korda, M. Putinar, I. Mezic (2020)
 addpath('Resources\')
 addpath('Datensatz\');
@@ -12,21 +12,21 @@ rng(2141444)
 example= '3'; % 1: learning between identical subsystems 2: learning between partically identical subsystems 3: learning within identical & partially subsystems
 
 input_ind = 1;  % local input index of 1-th agent for 2-th agent
-input_ind_2 = 2;  % local input index of 3-th agent for 4-th agent
+input_ind_2 = 2;  % local input index of 3-th agent for 4-th agent 
 n = 6; %num of full states of orginal system
-N=3;   % num of agents
+N=3;   % num of agents in old network
 
 switch example
     case '1'
-        N_n = N+1;
+        N_n = N+1; % Num of agents to be plotted  in new networks
         input_ind_transfer =  [1];  % global input index  for 3-th agent  
     case '2'
         N_n = N;
         input_ind_transfer =  [1 4];  % global input index  for 3-th agent  
         input_ind_new_trans = 2;  % local input index of 4-th agent for 3-th agent 
     case '3'
-        N_n = N+1;
-        input_ind_transfer =  [1 8];  % global input index  for 3-th agent  
+        N_n = N+7;
+        input_ind_transfer =  [1 8   6 16  20 4  ];  % global input index  for 3-th 4-th & 7-th agent  
         input_ind_new_trans = 2;   %local input index of 4-th agent for 3-th agent, which is computed from global input index .
 end
  
@@ -47,14 +47,30 @@ lamda3_2 = 0.03;
 beta3 = 0.001; 
 ga3 =0.08;    
 
+ga4 = 0.07;
+ mu8 = 0.04;
+lamda8 = 0; 
+lamda8_2 = 0.06 ;
+beta8 =  0.035;  
+
+
 q=3;
 
-
+% original system
 f_0 =  @(t,x)([ mu1*x(2,:); lamda1*x(1,:)-lamda1_2*x(1,:).^3; ...
         mu2*x(4,:); lamda2*x(3,:)-lamda2_2*x(3,:).^q+ beta2*(x(4,:).^0).*x(input_ind,:); ...
         mu3*x(6,:); lamda3*x(5,:)-lamda3_2*x(5,:).^q + beta3*(x(6,:).^0).*x(input_ind_transfer(1),:)] ); 
 
-if length(input_ind_transfer)>1
+switch example 
+    case '1'
+            id_input_3 = [];
+    % system with N=4 agents (for identical transfer learning)
+    f_0_new =  @(t,x)([mu1*x(2,:); lamda1*x(1,:)-lamda1_2*x(1,:).^3; ...
+        mu2*x(4,:); lamda2*x(3,:)-lamda2_2*x(3,:).^q+ beta2*(x(4,:).^0).*x(input_ind,:); ...
+         mu3*x(6,:); lamda3*x(5,:)-lamda3_2*x(5,:).^q + beta3*(x(6,:).^0).*x(input_ind_transfer(1),:);...
+        mu2*x(8,:); lamda2*x(7,:)-lamda2_2*x(7,:).^q+ beta2*(x(8,:).^0).*x(4+input_ind_2,:)] ); 
+    N_o=4; % num of agents in new network
+    case '2'
 id_input_3 = ceil(input_ind_transfer(2)*N/n);  % transfer global index to index of subsystem
 % system with N=4 agents (for partialy identical + (identical) transfer
 % learning). Note: for partially identical case, the subsystem 4 is
@@ -63,15 +79,24 @@ f_0_new =  @(t,x)([mu1*x(2,:); lamda1*x(1,:)-lamda1_2*x(1,:).^3; ...
         mu2*x(4,:); lamda2*x(3,:)-lamda2_2*x(3,:).^q+ beta2*(x(4,:).^0).*x(input_ind,:); ...
          mu3*x(6,:); lamda3*x(5,:)-lamda3_2*x(5,:).^q + beta3*(x(6,:).^0).*x(input_ind_transfer(1),:) + ga3*(x(6,:).^1).*x(input_ind_transfer(2),:);...
         mu2*x(8,:); lamda2*x(7,:)-lamda2_2*x(7,:).^q+ beta2*(x(8,:).^0).*x(4+input_ind_2,:)] ); 
-N_o=4;
-else 
-    id_input_3 = [];
-    % system with N=4 agents (for identical transfer learning)
-    f_0_new =  @(t,x)([mu1*x(2,:); lamda1*x(1,:)-lamda1_2*x(1,:).^3; ...
-        mu2*x(4,:); lamda2*x(3,:)-lamda2_2*x(3,:).^q+ beta2*(x(4,:).^0).*x(input_ind,:); ...
-         mu3*x(6,:); lamda3*x(5,:)-lamda3_2*x(5,:).^q + beta3*(x(6,:).^0).*x(input_ind_transfer(1),:);...
-        mu2*x(8,:); lamda2*x(7,:)-lamda2_2*x(7,:).^q+ beta2*(x(8,:).^0).*x(4+input_ind_2,:)] ); 
-    N_o=4;
+N_o=4; % num of agents in new network
+    case '3' 
+id_input_3 = ceil(input_ind_transfer(2)*N/n); % transfer global index to index of subsystem
+id_input_4 = ceil(input_ind_transfer(4)*N/n);
+
+N_o=10; % num of agents in new network
+f_0_new =  @(t,x)([mu1*x(2,:); lamda1*x(1,:)-lamda1_2*x(1,:).^3; ... % #1
+        mu2*x(4,:); lamda2*x(3,:)-lamda2_2*x(3,:).^q+ beta2*(x(4,:).^0).*x(input_ind,:); ...   % #2
+         mu3*x(6,:); lamda3*x(5,:)-lamda3_2*x(5,:).^q + beta3*(x(6,:).^0).*x(input_ind_transfer(1),:) + ga3*(x(6,:).^1).*x(input_ind_transfer(2),:);... % #3
+        mu2*x(8,:); lamda2*x(7,:)-lamda2_2*x(7,:).^q+ beta2*(x(8,:).^0).*x(input_ind_transfer(3),:) + ga4*(x(8,:).^1).*x(input_ind_transfer(4),:); ... % #4
+        mu3*x(10,:); lamda3*x(9,:)-lamda3_2*x(9,:).^q + beta3*(x(10,:).^0).*x(8,:); ...  #5
+        mu2*x(12,:); lamda2*x(11,:)-lamda2_2*x(11,:).^q+ beta2*(x(12,:).^0).*x(8,:);...   #6
+        mu3*x(14,:); lamda3*x(13,:)-lamda3_2*x(13,:).^q + beta3*(x(14,:).^0).*x(input_ind_transfer(5),:)+ ga3*(x(14,:).^1).*x(input_ind_transfer(6),:); ...  #7
+        mu8*x(16,:); lamda8*x(15,:)-lamda8_2*x(15,:).^q + beta8*(x(16,:).^0).*x(14,:); ...  #8
+        mu2*x(18,:); lamda2*x(17,:)-lamda2_2*x(17,:).^q + beta2*(x(18,:).^0).*x(16,:); ...  #9
+        mu8*x(20,:); lamda8*x(19,:)-lamda8_2*x(19,:).^q + beta8*(x(20,:).^0).*x(4,:); ...  #10
+        ] ); 
+
 end
 
 
@@ -92,14 +117,15 @@ f_0_newdg = discrete_runge_kutta4(f_0_new, deltaTg);
 %% ************************** Basis functions *****************************
 
 
-% load('Design_data_450_20data.mat','X0','cent_f','cent','cent_c','Nrbf','Xcurrent'); %paper
-load('Design_data_450_50data.mat','X0', 'cent_f','cent','cent_c','Nrbf','Xcurrent');   % paper
-% load('Design_data_450_2000data.mat','X0', 'cent_f','cent','cent_c','Nrbf','Xcurrent');
+load('Design_data_450_20data.mat','X0','cent_f','cent','cent_c','Nrbf','Xcurrent'); %paper
+% load('Design_data_450_50data.mat','X0', 'cent_f','cent','cent_c','Nrbf','Xcurrent');   % paper
+
 
 upb=3;
 
 
 Nlift_i = 10;
+
 
 for i=1:N
     if Nlift_i==10
@@ -113,7 +139,11 @@ for i=1:N
      dliftFun{i} = @(xx,yy)([yy; q*(xx(1,:).^(q-1)).*yy(1,:)]);
     end
 end
-
+if N_o>4
+    liftFun_new = @(xx)( [xx;xx(:,:).^2;xx(:,:).^3;  xx(1,:).*xx(2,:); (xx(1,:).^2).*xx(2,:);  xx(1,:).*(xx(2,:).^2);   ones(1, size(xx,2))] );
+     dliftFun_new = @(xx,yy)([yy; 2*xx(:,:).*yy(:,:); 3*(xx(:,:).^2).*yy(:,:); xx(1,:).*yy(2,:)+xx(2,:).*yy(1,:); xx(1,:).*xx(1,:).*yy(2,:)+2*xx(1,:).*xx(2,:).*yy(1,:);...
+                             2*xx(1,:).*xx(2,:).*yy(2,:)+xx(2,:).*xx(2,:).*yy(1,:);   zeros(1,size(yy,2)) ]);
+end
 
 %% ************************** Collect data ********************************
 tic
@@ -169,12 +199,12 @@ U{i}=X_f(ind_topo{i},:);
 end
 
 
-U_t{1}=U{1};  % Not Used
+U_t{1}=U{1};  % Useloss
 U_t{2}=X_f(input_ind,:);
 U_t{3}=X_f(input_ind_transfer(1),:); 
 
 
-U_t_g{1}=X_f_g(ind_topo{1},:); 
+U_t_g{1}=X_f_g(ind_topo{1},:); % Useloss
 U_t_g{2}=X_f_g(input_ind,:);  
 U_t_g{3}=X_f_g(input_ind_transfer(1),:);
 
@@ -182,7 +212,7 @@ U_t_g{3}=X_f_g(input_ind_transfer(1),:);
 
 fprintf('Data collection DONE, time = %1.2f s \n', toc);
 
-%% ******************************* Lift ***********************************
+%% ***************************** Lift ***********************************
 
 disp('Starting LIFTING')
 tic
@@ -263,7 +293,6 @@ for ii=1:N
 end
 
 
-
 %% lEDMD
 
 for i=1:N
@@ -284,7 +313,6 @@ Alift_lin_t{i}=Mn_lin_t{i}(:, 1:Nlift_i);
 end
 
 
-
 fprintf('Regression done, time = %1.2f s \n', toc);
 
 
@@ -297,28 +325,12 @@ tic
 
 
 
-Tmax = 0.5;
-Nsim = Tmax/deltaT;
-Nsim_g = Tmax/deltaTg;
-
 Nrun = 1; % Nsim;
-
-Nsample=500;
-
-X0=rand(n/N+n, Nsample)*1-0.5; % add #4
-
-EMAX_f=[];
-EMAX =[];
-EMAX_t=[];
-EMAX_t_g = [];
-EMAX_c=[];
-EMAX_lin=[];
-EMAX_lin_t=[];
-
 
 % Lifted initial condition
 % copy liftfct of #2 for #4
 liftFun{4} = liftFun{2};
+dliftFun{4} = dliftFun{2};
 % copy koopman model of #2 for #4
 Alift_t{4}=Alift_t{2};
 Blift_t{4}=Blift_t{2};
@@ -329,14 +341,54 @@ Blift_t_g{4}=Blift_t_g{2};
 Alift_lin_t{4}=Alift_lin_t{2};
 Blift_lin_t{4}=Blift_lin_t{2};
 
-if ~isempty(id_input_3) 
 
+
+if N_o >4  % for case '3'
+
+   f_g_md{6}=f_g_md{2};
+    f_g_md{9}=f_g_md{2};
+
+   f_g_md{5}=f_g_md{3};
+
+liftFun{6} = liftFun{2};
+liftFun{9} = liftFun{2};
+for i= [6, 9]
+   Alift_t{i}=Alift_t{2};
+Blift_t{i}=Blift_t{2};
+Alift_t_g{i}=Alift_t_g{2};
+Blift_t_g{i}=Blift_t_g{2};
+
+Alift_lin_t{i}=Alift_lin_t{2};
+Blift_lin_t{i}=Blift_lin_t{2}; 
+end
+liftFun{5} = liftFun{3};
+liftFun{7} = liftFun{3};
+for i= [5, 7]
+   Alift_t{i}=Alift_t{3};
+Blift_t{i}=Blift_t{3};
+Alift_t_g{i}=Alift_t_g{3};
+Blift_t_g{i}=Blift_t_g{3};
+
+Alift_lin_t{i}=Alift_lin_t{3};
+Blift_lin_t{i}=Blift_lin_t{3}; 
+end
+
+liftFun{10} = liftFun_new;
+dliftFun{10} = dliftFun_new;
+liftFun{8} = liftFun{10};
+end
+
+if ~isempty(id_input_3) 
+if N_o>4
+ Xcurrent_4=rand(n/N*(N_o-N),Ntraj)*3-3/2;   
+else
 Xcurrent_4=rand(n/N,Ntraj)*3-3/2;
+end
 Xcurrent=[Xcurrent_int;Xcurrent_4];
-X_f=zeros(n+n/N, Ntraj*Nrun);
-Y_f=zeros(n+n/N, Ntraj*Nrun);
-X_f_g=zeros(n+n/N, Ntraj);
-Y_f_g=zeros(n+n/N, Ntraj);
+X_f=zeros(n+n/N*(N_o-N), Ntraj*Nrun);
+Y_f=zeros(n+n/N*(N_o-N), Ntraj*Nrun);
+X_f_g=zeros(n+n/N*(N_o-N), Ntraj);
+Y_f_g=zeros(n+n/N*(N_o-N), Ntraj);
 for i = 1:Nrun
 % X_f= [x_1(0)..x_Ntraj(0), x_1(1)...x_Ntraj(1),...,x_1(Nsim-1)...x_Ntraj(Nsim-1)]
     X0next= f_0_newd(0,Xcurrent); 
@@ -353,23 +405,40 @@ for i = 1:Nrun
      end
 
 end
-for i=1:N+1
+for i=1:N_o
 X{i}=X_f(2*i-1:2*i,:);
 Y{i}=Y_f(2*i-1:2*i,:);
 
 X_g{i}=X_f_g(2*i-1:2*i,:);
 Y_g{i}=Y_f_g(2*i-1:2*i,:);
 end
-U_t{3}=X_f(input_ind_transfer,:); 
-U_t_g{3}=X_f_g(input_ind_transfer,:);
-Xlift_3=liftFun{3}(X{3});
+U_t{3}=X_f(input_ind_transfer(1:2),:); 
+U_t_g{3}=X_f_g(input_ind_transfer(1:2),:);
+Xlift_3=liftFun{3}(X{3});  %
 Ylift_3=liftFun{3}(Y{3});
 Xlift_3_g = liftFun{3}(X_g{3});
 Ylift_3_g = dliftFun{3}(X_g{3}, Y_g{3});
 Xlift_1=liftFun{1}(X{1});
+Xlift_2=liftFun{2}(X{2});
+
+
+if N_o>4
+U_t{4}=X_f(input_ind_transfer(3:4),:); 
+U_t_g{4}=X_f_g(input_ind_transfer(3:4),:);
 Xlift_4=liftFun{4}(X{4});
-Xlift_1_g=liftFun{1}(X_g{1});
-Xlift_4_g=liftFun{4}(X_g{4});
+Ylift_4=liftFun{4}(Y{4});
+Xlift_4_g = liftFun{4}(X_g{4});
+Ylift_4_g = dliftFun{4}(X_g{4}, Y_g{4});
+
+U_t_10=X_f(4,:); 
+U_t_g_10=X_f_g(4,:);
+Xlift_10=liftFun{10}(X{10});
+Ylift_10=liftFun{10}(Y{10});
+Xlift_10_g = liftFun{10}(X_g{10});
+Ylift_10_g = dliftFun{10}(X_g{10}, Y_g{10});
+
+end
+
 
 % mEDMD
 
@@ -379,6 +448,29 @@ VVtn=Vn*Vn';
 WVtn=Wn*Vn';
 Blift_3_p=WVtn*pinv(VVtn);
 Blift_t{3}=[Blift_t{3} Blift_3_p];
+
+
+if N_o>4
+
+Blift_t{7} =Blift_t{3};
+
+Wn=Ylift_4-Alift_t{4}*Xlift_4-Blift_t{4}(:,1:Nlift_i)*Xlift_4.*U_t{4}(1,:);
+Vn=[Xlift_4.*U_t{4}(2,:)];
+VVtn=Vn*Vn';
+WVtn=Wn*Vn';
+Blift_4_p=WVtn*pinv(VVtn);
+Blift_t{4}=[Blift_t{4} Blift_4_p];
+
+Wn=Ylift_10;
+Vn = [Xlift_10; Xlift_10*diag(U_t_10)];
+VVtn = Vn*Vn';
+WVtn = Wn*Vn';
+Mn_t_10 = WVtn * pinv(VVtn);  % [A,B1,...Bn]
+Alift_t{10}=Mn_t_10(:, 1:Nlift_i);
+Blift_t{10}=Mn_t_10(:, Nlift_i+1:end);
+Alift_t{8} = Alift_t{10};
+Blift_t{8} = Blift_t{10};
+end
 
 %mgEDMD
 Wn_g=Ylift_3_g-Alift_t_g{3}*Xlift_3_g-Blift_t_g{3}(:,1:Nlift_i)*Xlift_3_g.*U_t_g{3}(1,:);
@@ -390,9 +482,39 @@ Blift_t_g{3}=[Blift_t_g{3} Blift_3_p_g];
 
 
 f_g_md{3} = @(t,x,u)(Alift_t_g{3}*x+Blift_t_g{3}*kron(eye(size(U_t_g{3},1)), x)*u);
-f_g_md{3}=discrete_runge_kutta4_u(f_g_md{3}, deltaTg);
+f_g_md{3}= discrete_runge_kutta4_u(f_g_md{3}, deltaTg);
 
- 
+f_g_md{4}=f_g_md{2}; % case 1 & 2
+
+if N_o>4
+
+f_g_md{7} = f_g_md{3};
+
+Wn_g=Ylift_4_g-Alift_t_g{4}*Xlift_4_g-Blift_t_g{4}(:,1:Nlift_i)*Xlift_4_g.*U_t_g{4}(1,:);
+Vn_g=[Xlift_4_g.*U_t_g{4}(2,:)];
+VVtn_g=Vn_g*Vn_g';
+WVtn_g=Wn_g*Vn_g';
+Blift_4_p_g=WVtn_g*pinv(VVtn_g);
+Blift_t_g{4}=[Blift_t_g{4} Blift_4_p_g];  
+f_g_md{4} = @(t,x,u)(Alift_t_g{4}*x+Blift_t_g{4}*kron(eye(size(U_t_g{4},1)), x)*u);
+f_g_md{4}= discrete_runge_kutta4_u(f_g_md{4}, deltaTg);
+
+Wn=Ylift_10_g;
+Vn = [Xlift_10_g; Xlift_10_g*diag(U_t_g_10)];
+VVtn = Vn*Vn';
+WVtn = Wn*Vn';
+Mn_t_10_g = WVtn * pinv(VVtn);  % [A,B1,...Bn]
+Alift_t_g{10}=Mn_t_10_g(:, 1:Nlift_i);
+Blift_t_g{10}=Mn_t_10_g(:, Nlift_i+1:end);
+f_g_md{10} = @(t,x,u)(Alift_t_g{10}*x+Blift_t_g{10}*kron(eye(size(U_t_g_10,1)), x)*u);
+f_g_md{10}= discrete_runge_kutta4_u(f_g_md{10}, deltaTg);
+
+f_g_md{8}=f_g_md{10};
+
+
+end
+
+
 
 % lEDMD
 Wn=Ylift_3-Alift_lin_t{3}*Xlift_3-Blift_lin_t{3}*Xlift_1;
@@ -403,10 +525,32 @@ Blift_lin_3_p=WVtn*pinv(VVtn);
 Blift_lin_t{3}=[Blift_lin_t{3} Blift_lin_3_p];
 
 
+if N_o>4
+Blift_lin_t{7} =Blift_lin_t{3};
+
+Wn=Ylift_4-Alift_lin_t{4}*Xlift_4-Blift_lin_t{4}*Xlift_3;
+Vn=liftFun{id_input_4}(X{id_input_4});
+VVtn=Vn*Vn';
+WVtn=Wn*Vn';
+Blift_lin_4_p=WVtn*pinv(VVtn);
+Blift_lin_t{4}=[Blift_lin_t{4} Blift_lin_4_p];
+
+
+Wn_lin = Ylift_10;
+Vn_lin = [Xlift_10 ; Xlift_2];
+VVtn_lin = Vn_lin*Vn_lin';
+WVtn_lin = Wn_lin*Vn_lin';
+Mn_lin_t_10 = WVtn_lin * pinv(VVtn_lin);  % [A,B1,...Bn]
+Alift_lin_t{10}=Mn_lin_t_10(:, 1:Nlift_i);
+Blift_lin_t{10}=Mn_lin_t_10(:, Nlift_i+1:end);
+
+Alift_lin_t{8} = Alift_lin_t{10};
+Blift_lin_t{8} = Blift_lin_t{10};
+
 end
 
-f_g_md{4}=f_g_md{2};
 
+end
 
 
 
@@ -414,14 +558,20 @@ fprintf('learning finished, time = %1.2f s \n', toc);
 
 
 
-%%%%%%%%%%%%%%%%% Simulation %%%%%%%%%%%%%%%
-
+%% %%%%%%%%%%%%%%% Simulation %%%%%%%%%%%%%%%
 disp('----------------------------------------------------');
 disp('----------------------------------------------------');
 disp('Starting simulation');
 
 
-% % % evaluate assumption in Prop.4.7 with 2000 Samples 
+Tmax = 0.5;
+
+%%% evaluate assumption in Prop.4.7 with 2000 Samples 
+if 0
+Nsample=2000;
+X0=rand(n/N*(N_o-N)+n, Nsample)*1-0.5; % add #4
+
+
 %  i=2,j=3 ;  i=3,j=2
 if N_n >N && ~isempty(id_input_3) && Ntraj>1500
   boundx1= 0.5*2;
@@ -441,7 +591,16 @@ if N_n >N && ~isempty(id_input_3) && Ntraj>1500
  disp(['E34*E43=', num2str(E34*E43)]);
 disp('------------------------------------------------------');
 end
+end
+%%
+Nsample=500;
+X0=rand(n/N*(N_o-N)+n, Nsample)*1-0.5; % add #4
+Nsim = Tmax/deltaT;
+Nsim_g = Tmax/deltaTg;
 
+EMAX_t=[];
+EMAX_t_g = [];
+EMAX_lin_t=[];
 for Ni=1:Nsample
 x0 = X0(:,Ni);
 x_true = x0(1:N_o*2,:);
@@ -456,11 +615,11 @@ xlift_lin_t{i}=xlift{i};  % lEDMD
 end
 
 
-%% sim for lEDMD and mEDMD
+%%% sim for lEDMD and mEDMD
 for i = 0:Nsim-1
 
 
-
+% exchange states within networks
 x_n_old_t{2}=xlift_t{1}(input_ind,end);  
 if  ~isempty(id_input_3)
 x_n_old_t{3}=[xlift_t{1}(input_ind_transfer(1), end); xlift_t{id_input_3}(input_ind_new_trans,end)];
@@ -468,6 +627,16 @@ else
  x_n_old_t{3}=[x_n_old_t{2}];   
 end
 x_n_old_t{4}=xlift_t{3}(input_ind_2,end);
+
+if N_o>4
+x_n_old_t{4}=[xlift_t{3}(input_ind_2,end); xlift_t{8}(2 ,end)  ];
+x_n_old_t{5}=xlift_t{4}(2 ,end) ; 
+x_n_old_t{6}=xlift_t{4}(2 ,end) ; 
+x_n_old_t{7}=[xlift_t{10}(2 ,end);xlift_t{2}(2 ,end)  ];
+x_n_old_t{8}=xlift_t{7}(2 ,end) ;
+x_n_old_t{9}=xlift_t{8}(2 ,end) ;
+x_n_old_t{10}=xlift_t{2}(2 ,end) ;
+end
 
 x_lift_old_t{2}=[xlift_lin_t{1}(:,end)]; 
 if ~isempty(id_input_3)
@@ -477,8 +646,18 @@ else
 end
 x_lift_old_t{4}=xlift_lin_t{3}(:,end);
 
+if N_o>4
+x_lift_old_t{4}=[xlift_lin_t{3}(:,end); xlift_lin_t{8}(: ,end)  ];
+x_lift_old_t{5}=xlift_lin_t{4}(: ,end) ; 
+x_lift_old_t{6}=xlift_lin_t{4}(: ,end) ; 
+x_lift_old_t{7}=[xlift_lin_t{10}(: ,end);xlift_lin_t{2}(: ,end)  ];
+x_lift_old_t{8}=xlift_lin_t{7}(:,end) ;
+x_lift_old_t{9}=xlift_lin_t{8}(: ,end) ;
+x_lift_old_t{10}=xlift_lin_t{2}(: ,end) ;
+end
 
-    for ii=1:N_o  % add agent #4
+% update states
+    for ii=1:N_o 
 
     if ii==1
     xlift_t{ii} = [xlift_t{ii}, Alift_t{ii}*xlift_t{ii}(:,end)];  % mEDMD
@@ -501,8 +680,7 @@ end
 
 
 
-
-%% sim for mgEDMD 
+%%% sim for mgEDMD 
 for i=1:Nsim_g
 
 x_n_old_t_g{2}=xlift_t_g{1}(input_ind,end);  
@@ -512,6 +690,18 @@ else
 x_n_old_t_g{3}=[xlift_t_g{1}(input_ind_transfer(1),end)]; 
 end
 x_n_old_t_g{4}=xlift_t_g{3}(input_ind_2,end);
+
+
+if N_o>4
+x_n_old_t_g{4}=[xlift_t_g{3}(input_ind_2,end); xlift_t_g{8}(2 ,end)  ];
+x_n_old_t_g{5}=xlift_t_g{4}(2 ,end) ; 
+x_n_old_t_g{6}=xlift_t_g{4}(2 ,end) ; 
+x_n_old_t_g{7}=[xlift_t_g{10}(2 ,end);xlift_t_g{2}(2 ,end)  ];
+x_n_old_t_g{8}=xlift_t_g{7}(2 ,end) ;
+x_n_old_t_g{9}=xlift_t_g{8}(2 ,end) ;
+x_n_old_t_g{10}=xlift_t_g{2}(2 ,end) ;
+end
+
 
 for ii=1:N_o
 if ii==1
@@ -534,19 +724,25 @@ end
 
 x_true = x_true_g (:, 1:deltaT/deltaTg:Nsim_g+1);
 
-
+x_koop_t_temp=[];
+x_koop_t_g_temp = [];
+x_koop_lin_t_temp = [];
 
 for ii=1:N_o
 
-x_koopn_t{ii}=xlift_t{ii}(1:n/N,:);   % mEDMD
-x_koopn_t_g{ii}=xlift_t_g{ii}(1:n/N,:);  %mgEDMD
-x_koopn_lin_t{ii}=xlift_lin_t{ii}(1:n/N,:);  %lEDMD
+x_koop_t{ii}=xlift_t{ii}(1:n/N,:);   % mEDMD
+x_koop_t_g{ii}=xlift_t_g{ii}(1:n/N,:);  %mgEDMD
+x_koop_lin_t{ii}=xlift_lin_t{ii}(1:n/N,:);  %lEDMD
+
+x_koop_t_temp = [x_koop_t_temp; x_koop_t{ii}];
+x_koop_t_g_temp = [x_koop_t_g_temp; x_koop_t_g{ii}];
+x_koop_lin_t_temp = [x_koop_lin_t_temp; x_koop_lin_t{ii}];
 
 end
 
-emax_t = max(abs([x_koopn_t{1};x_koopn_t{2};x_koopn_t{3};x_koopn_t{4}]-x_true),[],2);
-emax_t_g = max(abs([x_koopn_t_g{1};x_koopn_t_g{2};x_koopn_t_g{3};x_koopn_t_g{4}]-x_true_g),[],2);
-emax_lin_t = max(abs([x_koopn_lin_t{1};x_koopn_lin_t{2};x_koopn_lin_t{3};x_koopn_lin_t{4}]-x_true),[],2);
+emax_t = max(abs(x_koop_t_temp-x_true),[],2);
+emax_t_g = max(abs(x_koop_t_g_temp-x_true_g),[],2);
+emax_lin_t = max(abs(x_koop_lin_t_temp-x_true),[],2);
 
 EMAX_t = [EMAX_t emax_t];
 EMAX_t_g = [EMAX_t_g emax_t_g];
@@ -560,6 +756,7 @@ end
 
 %% overall plot 
 
+choice_ind = 1; % 1: plot  #3 #5 #7 #10 #8 for case 3, 0:  #1 #2 #4 #6 #9
 
 psize = [14.65, 9.6];
 ppos  = [0.3, 0.2, psize(1)-0.3 psize(2)-0.2];
@@ -571,33 +768,47 @@ Legend_size = 18;
 Title_size = 18;
 Temp_comb=[ EMAX_lin_t;EMAX_t; EMAX_t_g];
 Nsample=size(EMAX_t,2);
-if ~isempty(id_input_3) && N_n==N
-     N=3; % plot only the first 3 agents
-    col=repmat({'g','c','w'}, 1,3);
-    Temp_comb=[ EMAX_lin_t(1:2*N,:);EMAX_t(1:2*N,:); EMAX_t_g(1:2*N,:)];
+
+
+if choice_ind
+ind_show = [5 6 9 10 13 14 19 20 15 16]; % for case 3: #3 #5 #7 #10 #8
 else
-    N=4; % plot all 4 agents
-    col=repmat({'y','g','c','w'}, 1,3);
+ind_show = [1 2 3 4 7 8 11 12 17 18 ];  % #1 #2 #4 #6 #9
 end
 
+switch example
+    case '1'
+    N=4; % plot 4 agents
+    col=repmat([1 1 0; 0 1 0; 0 1 1; 1 1 1], 3,1); 
+    pos=[2 2.4 2.8 3.2  3.8+0.2 4.2+0.2 4.6+0.2 5+0.2  3.8+2.2 4.2+2.2 4.6+2.2 5+2.2     ];   
+ 
+    case '2'
+     N=3;
+    col=repmat([0 1 0; 0 1 1; 1 1 1], 3,1);
+    Temp_comb=[ EMAX_lin_t(1:2*N,:);EMAX_t(1:2*N,:); EMAX_t_g(1:2*N,:)];  
+    pos=[2 2.6 3.2   4  4.6 5.2  4+2  4.6+2  5.2+2     ];
+   
+    case '3'
+    N=5; 
+    col=repmat([ 0.7 0.7 0.7 ; 1 1 0;0 1 0; 0 1 1; 1 1 1], 3,1);
+    Temp_comb=[ EMAX_lin_t(ind_show,:);EMAX_t(ind_show,:); EMAX_t_g(ind_show,:)];  
+    pos=[2 2.3 2.6 2.9 3.2  4 4+0.3 4+0.6 4+0.9 4+1.2  6 6+0.3 6+0.6 6+0.9 6+1.2     ];
+   
+    
+end
+
+posmean=[ mean(pos(1:N)) mean(pos(N+1:2*N))  mean(pos(2*N+1:end)) ];
+pos2 = mean([pos(N:N+1);pos(2*N:2*N+1)],2);
 EMAX_all=zeros(N*3, size(Temp_comb,2));
-Tmax=0.5;
+
 for i=1:N*3
-%     EMAX_all(i,:)=log(sqrt(Temp_comb(2*i-1,:).^2+Temp_comb(2*i,:).^2));
-     EMAX_all(i,:)=log( abs(Temp_comb(2*i-1,:))+abs(Temp_comb(2*i,:)) );
+%     EMAX_all(i,:)=log(sqrt(Temp_comb(2*i-1,:).^2+Temp_comb(2*i,:).^2));%log(|e_i|_2)
+     EMAX_all(i,:)=log( abs(Temp_comb(2*i-1,:))+abs(Temp_comb(2*i,:)) ); % log(|e_i|_1)
 end
 g = kron([1:N*3]', ones(Nsample,1));
-if N==4
-pos=[2 2.4 2.8 3.2  3.8+0.2 4.2+0.2 4.6+0.2 5+0.2  3.8+2.2 4.2+2.2 4.6+2.2 5+2.2     ];
-posmean=[ mean(pos(1:4)) mean(pos(5:8))  mean(pos(9:end)) ];
-pos2 = mean([pos(4:5);pos(8:9)],2);
-else
-    pos=[2 2.6 3.2   4  4.6 5.2  4+2  4.6+2  5.2+2     ];
-    posmean=[ mean(pos(1:3)) mean(pos(4:6))  mean(pos(7:end)) ];
-    pos2 = mean([pos(3:4);pos(6:7)],2);
-end
 
-% col=repmat({cm(6,:),'g','c','w'}, 1,2);
+
+
 
 row1 = { 'lEDMD', 'mEDMD', 'mgEDMD' };
 tickLabels = row1;
@@ -611,28 +822,40 @@ set(gca,'YScale','linear');
 grid on
 h = findobj(gca,'Tag','Box');
 for j=1:length(h)
-   patch(get(h(j),'XData'),get(h(j),'YData'),col{j},'FaceAlpha',.6);
+   patch(get(h(j),'XData'),get(h(j),'YData'),  col(j,:),'FaceAlpha',.6);
 end
 c = get(gca, 'Children');
 xline(pos2,':');
 set(gcf,'PaperUnits','centimeters','PaperSize',psize,'PaperPosition',ppos)
 set(gca,'Position',gcaPos,'fontsize',FTsize_axisnumbers);
  title(['$\ln(\|\Delta x_i\|_{\infty})$, ', num2str(Ntraj), ' snapshots'],'interpreter','latex', 'FontSize', Title_size); 
- if N==4
+
+
+
+ switch example
+     case '1'
 hleg1 = legend(c(1:4), ' $ x_1 $', '$x_2$', '$x^{\sharp}_3$', '$x_4$', 'Interpreter', 'latex','FontSize', Legend_size, 'Orientation','horizontal'); %
- else
+     case '2'
    hleg1 = legend(c(1:3), ' $ x_1 $', '$x_2$', '$x^{\sharp}_3$', 'Interpreter', 'latex','FontSize', Legend_size,'Orientation','horizontal');
+     case '3'
+         if choice_ind
+   hleg1 = legend(c(1:5), '$x^{\sharp}_3$', ' $x_5$', '$x_7$', '$x_{10}$', '$x_8$',   'Interpreter', 'latex','FontSize', Legend_size,'Orientation','horizontal', 'NumColumns', 3);   
+         else
+   hleg1 = legend(c(1:5), ' $x_1$', '$x_2$', '$x_4$', '$x_6$', '$x_9$',  'Interpreter', 'latex','FontSize', Legend_size,'Orientation','horizontal','NumColumns', 3);         
+         end
  end
 set(gca, 'XGrid','off', 'YGrid','on');
 
 if printing
-    if ~isempty(id_input_3)
-        if N_n>3
-    name = sprintf(['Overall_Duffing_', num2str(Ntraj),'_transfer_new_part_ident']);
-        else
+    switch example
+    case '3'
+        
+    name = sprintf(['Overall_Duffing_', num2str(Ntraj),'_transfer_new_part_ident_', num2str(choice_ind)]);
+   
+    case '2'
           name = sprintf(['Overall_Duffing_', num2str(Ntraj),'_transfer_new_part']);
-        end
-    else
+       
+    case '1'
      name = sprintf(['Overall_Duffing_', num2str(Ntraj),'_transfer_new_ident']);  
     end
     print([folder name],'-depsc','-painters')
@@ -644,6 +867,4 @@ end
 
 
 end
-
-
 
